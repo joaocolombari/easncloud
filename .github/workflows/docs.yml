@@ -1,0 +1,47 @@
+name: Build and deploy documentation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: docs/requirements.txt
+      - name: Install documentation dependencies
+        run: python -m pip install -r docs/requirements.txt
+      - name: Build documentation with warnings treated as errors
+        run: python -m sphinx -n -W --keep-going -b html docs/sphinx/source docs/sphinx/build/html
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/sphinx/build/html
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy documentation
+        id: deployment
+        uses: actions/deploy-pages@v5

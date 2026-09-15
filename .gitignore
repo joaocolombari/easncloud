@@ -1,0 +1,3 @@
+.venv/
+docs/sphinx/build/
+__pycache__/
